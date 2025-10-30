@@ -1,0 +1,12 @@
+{
+	"required": true,
+	"package": "com.easeon.cs.tooltipplus.mixin",
+	"compatibilityLevel": "JAVA_21",
+    "refmap": "client-easeon.cs.tooltipplus.teron.fabric-refmap.json",
+    "client": [
+      "ItemStackMixin"
+    ],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
