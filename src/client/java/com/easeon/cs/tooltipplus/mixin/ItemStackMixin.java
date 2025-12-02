@@ -2,7 +2,9 @@ package com.easeon.cs.tooltipplus.mixin;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.EntityBucketItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.tooltip.TooltipType;
@@ -14,6 +16,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.lang.reflect.Field;
 import java.util.List;
 
 @Mixin(ItemStack.class)
@@ -46,19 +50,61 @@ public class ItemStackMixin {
                     .append(Text.literal(" (" + String.format("%.1f", percent) + "%)").formatted(Formatting.DARK_GRAY)));
         }
 
-        // 양동이에 담긴 엔티티 정보 추가
-        if (stack.contains(DataComponentTypes.BUCKET_ENTITY_DATA)) {
-            var bucketData = stack.get(DataComponentTypes.BUCKET_ENTITY_DATA);
-            if (bucketData != null) {
-                var nbt = bucketData.copyNbt();
+        Item item = stack.getItem();
+        if (item instanceof EntityBucketItem entityBucketItem) {
+            try {
+                Field field = null;
+                for (Field f : EntityBucketItem.class.getDeclaredFields()) {
+                    if (EntityType.class.isAssignableFrom(f.getType())) {
+                        field = f;
+                        field.setAccessible(true);
+                        break;
+                    }
+                }
+                EntityType<?> entityType = (EntityType<?>) field.get(entityBucketItem);
 
-                tooltip.add(Text.literal(""));
+                String translationKey = entityType.getTranslationKey();
 
-                // 이름 정보
-                var customNameOptional = nbt.getString("CustomName");
-                customNameOptional.ifPresent(customNameJson -> tooltip.add(Text.literal("Name: ")
-                        .formatted(Formatting.GRAY)
-                        .append(Text.literal(customNameJson).formatted(Formatting.AQUA))));
+                if (translationKey.contains("axolotl")) {
+                    var variant = stack.get(DataComponentTypes.AXOLOTL_VARIANT);
+                    if (variant != null) {
+                        // Axolotl Variant를 DyeColor의 키로 매핑
+                        String colorKey;
+                        Formatting colorFormatting;
+
+                        switch (variant) {
+                            case LUCY: // 분홍색 계열
+                                colorKey = "pink";
+                                colorFormatting = Formatting.LIGHT_PURPLE;
+                                break;
+                            case WILD: // 갈색 계열
+                                colorKey = "brown";
+                                colorFormatting = Formatting.GOLD;
+                                break;
+                            case GOLD: // 노란색/금색 계열
+                                colorKey = "yellow";
+                                colorFormatting = Formatting.YELLOW;
+                                break;
+                            case CYAN: // 청록색 계열
+                                colorKey = "cyan";
+                                colorFormatting = Formatting.AQUA;
+                                break;
+                            case BLUE: // 파란색 계열 (가장 희귀)
+                                colorKey = "blue";
+                                colorFormatting = Formatting.BLUE;
+                                break;
+                            default:
+                                colorKey = "light_gray";
+                                colorFormatting = Formatting.GRAY;
+                                break;
+                        }
+
+                        // 마인크래프트 내부 일반 색상 키 사용: color.minecraft.<colorKey>
+                        tooltip.add(Text.translatable("color.minecraft." + colorKey).formatted(colorFormatting));
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
 
@@ -78,3 +124,4 @@ public class ItemStackMixin {
         }
     }
 }
+
