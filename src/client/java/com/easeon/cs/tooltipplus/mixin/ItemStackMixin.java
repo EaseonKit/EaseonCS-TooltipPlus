@@ -1,6 +1,7 @@
 package com.easeon.cs.tooltipplus.mixin;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -43,6 +44,22 @@ public class ItemStackMixin {
             tooltip.add(Text.translatable("item.durability", durability, max)
                     .formatted(color)
                     .append(Text.literal(" (" + String.format("%.1f", percent) + "%)").formatted(Formatting.DARK_GRAY)));
+        }
+
+        // 양동이에 담긴 엔티티 정보 추가
+        if (stack.contains(DataComponentTypes.BUCKET_ENTITY_DATA)) {
+            var bucketData = stack.get(DataComponentTypes.BUCKET_ENTITY_DATA);
+            if (bucketData != null) {
+                var nbt = bucketData.copyNbt();
+
+                tooltip.add(Text.literal(""));
+
+                // 이름 정보
+                var customNameOptional = nbt.getString("CustomName");
+                customNameOptional.ifPresent(customNameJson -> tooltip.add(Text.literal("Name: ")
+                        .formatted(Formatting.GRAY)
+                        .append(Text.literal(customNameJson).formatted(Formatting.AQUA))));
+            }
         }
 
         if (isShiftPressed) {
